@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       })
 
       // Store OAuth info in OAuthAccount model
-      await tx.oauthAccount.create({
+      await tx.oAuthAccount.create({
         data: {
           userId:      u.id,
           provider:    'discord',
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Also upsert OAuthAccount in case it's missing
-    await prisma.oauthAccount.upsert({
+    await prisma.oAuthAccount.upsert({
       where: {
         provider_providerId: {
           provider:   'discord',
