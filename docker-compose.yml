@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reiogn_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reiogn
+      POSTGRES_PASSWORD: reiogn_pass
+      POSTGRES_DB: reiogn
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reiogn -d reiogn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - reiogn_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: reiogn_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - reiogn_net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reiogn_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://reiogn:reiogn_pass@postgres:5432/reiogn
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - .env.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reiogn_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  reiogn_net:
+    driver: bridge

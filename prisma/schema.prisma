@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  TRIAL
+  STARTER
+  PRO
+  ELITE
+}
+
+enum SubStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum TxType {
+  CREDIT
+  DEBIT
+  REFILL
+  BONUS
+  REFUND
+}
+
+enum ToolName {
+  DEEP_WORK_ENGINE
+  COGNITIVE_CLONE
+  RESEARCH_BUILDER
+  SKILL_ROI_ANALYZER
+  MEMORY_INTELLIGENCE
+  EXECUTION_OPTIMIZER
+  OPPORTUNITY_RADAR
+  DECISION_SIMULATOR
+  FOCUS_SHIELD
+  WEALTH_MAPPER
+}
+
+enum ToolWeight {
+  LIGHT
+  MEDIUM
+  HEAVY
+}
+
+enum AuditSeverity {
+  INFO
+  WARN
+  ERROR
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  passwordHash      String?
+  role              Role      @default(USER)
+  avatarUrl         String?
+  emailVerified     Boolean   @default(false)
+  emailVerifyToken  String?
+  trialEndsAt       DateTime?
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  subscription      Subscription?
+  tokenLedger       TokenLedger?
+  tokenTxs          TokenTransaction[]
+  toolUsages        ToolUsage[]
+  sessions          Session[]
+  oauthAccounts     OAuthAccount[]
+  invoices          Invoice[]
+  analytics         AnalyticsDaily[]
+  auditLogs         AuditLog[]
+  loginHistory      LoginHistory[]
+  referralCode      ReferralCode?
+  referredBy        Referral?          @relation("ReferredUser")
+  referralsMade     Referral[]         @relation("Referrer")
+
+  @@map("users")
+}
+
+model LoginHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean
+  failReason String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_history")
+}
+
+model OAuthAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Subscription {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  plan               Plan      @default(TRIAL)
+  status             SubStatus @default(TRIALING)
+  razorpaySubId      String?   @unique
+  razorpayCustomerId String?
+  trialEnd           DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  cancelledAt        DateTime?
+  lastPaymentAt      DateTime?
+  lastPaymentAmount  Int?
+  failedPaymentCount Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices           Invoice[]
+
+  @@map("subscriptions")
+}
+
+model TokenLedger {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  balance     Int      @default(0)
+  totalEarned Int      @default(0)
+  totalSpent  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("token_ledgers")
+}
+
+model TokenTransaction {
+  id           String    @id @default(cuid())
+  userId       String
+  type         TxType
+  amount       Int
+  balanceAfter Int
+  description  String?
+  toolName     ToolName?
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("token_transactions")
+}
+
+model ToolUsage {
+  id           String     @id @default(cuid())
+  userId       String
+  tool         ToolName
+  weight       ToolWeight
+  tokensUsed   Int
+  inputTokens  Int        @default(0)
+  outputTokens Int        @default(0)
+  aiCostUsd    Float      @default(0)
+  provider     String     @default("anthropic")
+  durationMs   Int        @default(0)
+  success      Boolean    @default(true)
+  errorMsg     String?
+  createdAt    DateTime   @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tool_usages")
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  userId         String
+  subscriptionId String
+  razorpayPayId  String?      @unique
+  amount         Int
+  currency       String       @default("INR")
+  status         String       @default("pending")
+  plan           Plan
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model AnalyticsDaily {
+  id              String   @id @default(cuid())
+  userId          String
+  date            DateTime @db.Date
+  totalTokensUsed Int      @default(0)
+  requestCount    Int      @default(0)
+  aiCostUsd       Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("analytics_daily")
+}
+
+model AuditLog {
+  id        String        @id @default(cuid())
+  userId    String?
+  action    String
+  ipAddress String?
+  userAgent String?
+  severity  AuditSeverity @default(INFO)
+  metadata  Json?
+  createdAt DateTime      @default(now())
+
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model ReferralCode {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  code      String     @unique
+  usedCount Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals Referral[]
+
+  @@map("referral_codes")
+}
+
+model Referral {
+  id             String       @id @default(cuid())
+  referrerId     String
+  referredUserId String       @unique
+  referralCodeId String
+  bonusGranted   Boolean      @default(false)
+  bonusAmount    Int?
+  createdAt      DateTime     @default(now())
+
+  referrer       User         @relation("Referrer",     fields: [referrerId],     references: [id], onDelete: Cascade)
+  referredUser   User         @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referralCode   ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+
+  @@map("referrals")
+}
