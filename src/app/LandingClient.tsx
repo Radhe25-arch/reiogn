@@ -58,7 +58,7 @@ export default function LandingClient() {
       { x:.88, y:.18, r:290, color:'rgba(0,240,200,', base:.038 },
       { x:.5,  y:.88, r:360, color:'rgba(184,255,0,', base:.028 },
     ]
-    function draw() {
+    function draw() { if(!canvas) return
       canvas.width = window.innerWidth; canvas.height = window.innerHeight
       ctx.clearRect(0,0,canvas.width,canvas.height); t += .005
       const bg = ctx.createRadialGradient(canvas.width*.5,canvas.height*.4,0,canvas.width*.5,canvas.height*.4,canvas.width*.9)
