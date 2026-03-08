@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     if (payload) {
       await prisma.session.updateMany({
         where: { refreshToken },
-        data: { revokedAt: new Date() },
+        data: { expiresAt: new Date() },
       }).catch(() => {})
 
       await prisma.auditLog.create({
