@@ -369,7 +369,7 @@ export default function LandingClient() {
     type Pt = { x:number;y:number;vx:number;vy:number;r:number;p:number;a:number };
     let W=0,H=0,pts:Pt[]=[];
     const N=100;
-    function init(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;pts=[];for(let i=0;i<N;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.3,p:Math.random()*Math.PI*2,a:Math.random()*.3+.08});}
+    function init(){W=cv!.width=window.innerWidth;H=cv!.height=window.innerHeight;pts=[];for(let i=0;i<N;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.3,p:Math.random()*Math.PI*2,a:Math.random()*.3+.08});}
     init();window.addEventListener("resize",init);
     let raf:number;
     function frame(){
