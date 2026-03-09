@@ -445,7 +445,7 @@ export default function LandingClient() {
   useEffect(() => {
     const cv = document.getElementById("intro-cv") as HTMLCanvasElement | null;
     if (!cv) return;
-    const ctx = cv.getContext("2d");
+    const ctx = cv.getContext("2d")!;
     if (!ctx) return;
     type Pt = { x:number;y:number;vx:number;vy:number;r:number;p:number;a:number };
     let W=0,H=0,pts:Pt[]=[];
